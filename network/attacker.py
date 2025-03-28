@@ -7,7 +7,6 @@ import time
 import random
 from core.rsa_core import encrypt_message
 
-# Ensure core module is accessible
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # -------------------------------

@@ -4,7 +4,6 @@ import socket
 import os
 import sys
 
-# Fix import path before importing core
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from core.rsa_core import encrypt_message
