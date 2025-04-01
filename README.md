@@ -9,30 +9,33 @@ This project demonstrates a **timing side-channel attack** on the RSA encryption
 ## Project Structure -- 
 
 rsa_timing_attack/
-│
-├── core/                  # Core RSA logic (key generation, encryption, decryption)
+
+       ├── core/                  # Core RSA logic (key generation, encryption, decryption)
        
-     ├── rsa_core.py
+            ├── rsa_core.py
      
 
-├── network/               # Network-based simulation of all actors
+       ├── network/               # Network-based simulation of all actors
     
-    ├── sender.py          # Sends encrypted messages to the receiver
+           ├── sender.py          # Sends encrypted messages to the receiver
    
-    ├── receiver.py        # Decrypts messages and responds with an ACK
+           ├── receiver.py        # Decrypts messages and responds with an ACK
    
-    ├── attacker.py        # Sends crafted ciphertexts and measures response time
+           ├── attacker.py        # Sends crafted ciphertexts and measures response time
    
-    ├── public_key.txt     # Public key used by sender and attacker
+           ├── public_key.txt     # Public key used by sender and attacker
 
 
-├── logs/                  # Stores results of the timing attack
-│   └── timing_results.txt
-│
+       ├── logs/                  # Stores results of the timing attack
+    
+           ├──timing_results.txt
 
-├── analyze_attack.py      # Analyzes and visualizes timing data from the attack
-├── requirements.txt       # Python dependencies
-└── README.md              # Project documentation (you’re reading it!)
+
+       ├── analyze_attack.py      # Analyzes and visualizes timing data from the attack
+       
+       ├── requirements.txt       # Python dependencies
+       
+       ├── README.md              # Project documentation (you’re reading it!)
 
 
 
