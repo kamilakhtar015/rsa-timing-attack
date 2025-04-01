@@ -70,6 +70,7 @@ This project simulates a basic cryptographic environment involving three actors:
 ## 🔁 Workflow Diagram
 
 ```mermaid
+
 graph TD
     A[Receiver] -->|Generates RSA Keys| B[Public Key File]
     C[Sender] -->|Reads Public Key| B
