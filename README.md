@@ -6,7 +6,7 @@ This project demonstrates a **timing side-channel attack** on the RSA encryption
 
 ---
 
-## Project Structure
+## Project Structure -- 
 
 rsa_timing_attack/
 │
