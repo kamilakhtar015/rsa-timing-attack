@@ -103,4 +103,3 @@ In separate terminals (or tabs):
 ✅ Analyze and Visualize the Attack
     python analyze_attack.py
 
-s
