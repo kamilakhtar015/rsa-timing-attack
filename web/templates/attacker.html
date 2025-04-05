@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Attacker</title>
+</head>
+<body>
+    <h2>🕵️ Attacker - Timing Attack</h2>
+    <form method="POST" action="/run-attacker" id="attackForm">
+        <button type="submit">Run Timing Attack</button>
+    </form>
+
+    <div id="attackResults"></div>
+
+    <form method="POST" action="/analyze" id="analyzeForm">
+        <button type="submit">Analyze Timings</button>
+    </form>
+
+    <div id="analysis"></div>
+
+    <script>
+    document.getElementById("attackForm").onsubmit = async function(e) {
+        e.preventDefault();
+        const res = await fetch('/run-attacker', { method: 'POST' });
+        const data = await res.json();
+        let html = "<h3>🔍 Results:</h3><ul>";
+        data.results.forEach(r => {
+            html += `<li>${r.ciphertext} - ${r.time}s</li>`;
+        });
+        html += "</ul>";
+        document.getElementById("attackResults").innerHTML = html;
+    };
+
+    document.getElementById("analyzeForm").onsubmit = async function(e) {
+        e.preventDefault();
+        const res = await fetch('/analyze', { method: 'POST' });
+        const data = await res.json();
+        let html = "<h3>📊 Timing Analysis:</h3><ul>";
+        data.data.forEach((r, i) => {
+            html += `<li>#${i+1} - ${r.time}s</li>`;
+        });
+        html += "</ul>";
+        document.getElementById("analysis").innerHTML = html;
+    };
+    </script>
+</body>
+</html>

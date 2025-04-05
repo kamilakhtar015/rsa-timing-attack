@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Receiver</title>
+</head>
+<body>
+    <h2>🧭 Receiver - Key Generation</h2>
+    <form method="POST" action="/start-receiver" id="receiverForm">
+        <button type="submit">Start Receiver (Generate Keys)</button>
+    </form>
+    <p id="receiverStatus"></p>
+
+    <script>
+    document.getElementById("receiverForm").onsubmit = async function(e) {
+        e.preventDefault();
+        const res = await fetch('/start-receiver', { method: 'POST' });
+        const data = await res.json();
+        document.getElementById("receiverStatus").textContent = `✅ Receiver started. Public Key: ${data.public_key}`;
+    };
+    </script>
+</body>
+</html>

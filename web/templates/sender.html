@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sender</title>
+</head>
+<body>
+    <h2>📨 Sender</h2>
+    <form method="POST" action="/send-message" id="sendForm">
+        <input type="text" name="message" placeholder="Enter Message" required>
+        <button type="submit">Send</button>
+    </form>
+    <p id="sendResult"></p>
+
+    <script>
+    document.getElementById("sendForm").onsubmit = async function(e) {
+        e.preventDefault();
+        const form = new FormData(e.target);
+        const res = await fetch('/send-message', {
+            method: 'POST',
+            body: form
+        });
+        const data = await res.json();
+        document.getElementById("sendResult").textContent = `Ciphertext: ${data.ciphertext}`;
+    };
+    </script>
+</body>
+</html>
