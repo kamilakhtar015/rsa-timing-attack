@@ -6,9 +6,15 @@ This project demonstrates a **timing side-channel attack** on the RSA encryption
 
 ---
 
+<<<<<<< HEAD
 ## Project Structure -- 
+=======
+### 📁 Project Structure
+>>>>>>> my-local-changes
 
+```text
 rsa_timing_attack/
+<<<<<<< HEAD
 
        ├── core/                  # Core RSA logic (key generation, encryption, decryption)
        
@@ -37,6 +43,20 @@ rsa_timing_attack/
        
        ├── README.md              # Project documentation (you’re reading it!)
 
+=======
+├── core/                 # Core RSA logic (key generation, encryption, decryption)
+│   └── rsa_core.py
+├── network/              # Network-based simulation of all actors
+│   ├── sender.py         # Sends encrypted messages to the receiver
+│   ├── receiver.py       # Decrypts messages and responds with an ACK
+│   ├── attacker.py       # Sends crafted ciphertexts and measures response time
+│   └── public_key.txt    # Public key used by sender and attacker
+├── logs/                 # Stores results of the timing attack
+│   └── timing_results.txt
+├── analyze_attack.py     # Analyzes and visualizes timing data from the attack
+├── requirements.txt      # Python dependencies
+└── README.md             # Project documentation (you’re reading it!)
+>>>>>>> my-local-changes
 
 
 ---
@@ -67,6 +87,7 @@ This project simulates a basic cryptographic environment involving three actors:
 
 ---
 
+<<<<<<< HEAD
 ## 🔁 Workflow Diagram
 
 ```mermaid
@@ -80,6 +101,8 @@ graph TD
     D -->|Measures Response Time| E[Logs]
     F[Analyzer] -->|Reads Logs| E
     F -->|Visualizes Data| G[Graph + Stats]
+=======
+>>>>>>> my-local-changes
 
 
 ⚙️ How to Run
@@ -102,4 +125,7 @@ In separate terminals (or tabs):
 
 ✅ Analyze and Visualize the Attack
     python analyze_attack.py
+<<<<<<< HEAD
 
+=======
+>>>>>>> my-local-changes
