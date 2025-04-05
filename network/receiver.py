@@ -5,9 +5,7 @@ import threading
 import os
 import sys
 
-# -------------------------------
-# Fix Import Path for Core Module
-# -------------------------------
+
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, '..'))
 sys.path.insert(0, PROJECT_ROOT)
