@@ -5,7 +5,7 @@
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <h2>🟢 Receiver</h2>
+  <h2>🔓 Receiver</h2>
   <button onclick="startReceiver()">Start Receiver</button>
   <div id="logs"></div>
 
@@ -16,13 +16,12 @@
         .then(data => alert(data.message));
     }
 
-    // This will continuously fetch logs from the receiver
     setInterval(() => {
-      fetch('/receiver-logs')
+      fetch('/api/receiver/logs')
         .then(res => res.json())
         .then(data => {
-          const logs = data.logs.map(m => `<li>${m}</li>`).join("");
-          document.getElementById("logs").innerHTML = `<ul>${logs}</ul>`;
+          const logList = data.logs.map(line => `<li>${line}</li>`).join('');
+          document.getElementById("logs").innerHTML = `<ul>${logList}</ul>`;
         });
     }, 2000);
   </script>

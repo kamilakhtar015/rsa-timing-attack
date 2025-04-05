@@ -7,77 +7,37 @@
 </head>
 <body>
   <h2>🧠 Attacker</h2>
-
-  <button onclick="runAttack()">Run Timing Attack</button>
-  <p id="status" style="margin-top: 10px;"></p>
-
-  <canvas id="timingChart" width="800" height="400" style="margin-top: 20px;"></canvas>
+  <button onclick="runAttack()">Run Attack</button>
+  <canvas id="chart" width="800" height="400"></canvas>
 
   <script>
     let chart;
 
     function runAttack() {
-      document.getElementById("status").innerText = "Running attack...";
-
       fetch('/run-attacker', { method: 'POST' })
         .then(res => res.json())
         .then(data => {
-          const results = data.results;
-          const times = results.map(r => (r.time * 1000).toFixed(3)); // ms
-          const labels = results.map((r, i) => `#${i + 1}`);
+          const times = data.results.map(d => d.time);
+          const labels = data.results.map((_, i) => `#${i + 1}`);
 
           if (chart) chart.destroy();
-          chart = new Chart(document.getElementById("timingChart"), {
+          chart = new Chart(document.getElementById("chart"), {
             type: 'line',
             data: {
-              labels: labels,
+              labels,
               datasets: [{
-                label: 'Decryption Time (ms)',
+                label: 'Decryption Time (s)',
                 data: times,
                 borderColor: 'blue',
-                backgroundColor: 'lightblue',
-                borderWidth: 2,
-                fill: false,
-                tension: 0.2
+                borderWidth: 2
               }]
             },
             options: {
-              responsive: true,
-              plugins: {
-                tooltip: {
-                  callbacks: {
-                    label: function(context) {
-                      const idx = context.dataIndex;
-                      const time = results[idx].time;
-                      const ct = results[idx].ciphertext;
-                      return [`Time: ${(time * 1000).toFixed(3)} ms`, `Cipher: ${ct}`];
-                    }
-                  }
-                }
-              },
               scales: {
-                y: {
-                  beginAtZero: true,
-                  title: {
-                    display: true,
-                    text: 'Time (ms)'
-                  }
-                },
-                x: {
-                  title: {
-                    display: true,
-                    text: 'Test Number'
-                  }
-                }
+                y: { beginAtZero: true }
               }
             }
           });
-
-          document.getElementById("status").innerText = "Attack complete. Chart updated.";
-        })
-        .catch(err => {
-          console.error(err);
-          document.getElementById("status").innerText = "❌ Error running attack.";
         });
     }
   </script>

@@ -4,20 +4,15 @@ import time
 import random
 from flask import Flask, render_template, request, jsonify
 
-# Fix Python path to access core/ from web/
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from core.rsa_core import generate_rsa_keypair, encrypt_message, decrypt_message
 
 app = Flask(__name__)
-app.secret_key = "rsa-attack-ui"
-
-# Globals
+receiver_logs = []
 public_key = None
 private_key = None
 timing_log = []
-receiver_log = []
 
-# --- Utility ---
 def save_public_key_to_file(e, n):
     with open('../network/public_key.txt', 'w') as f:
         f.write(f"{e}\n{n}")
@@ -28,49 +23,48 @@ def load_public_key_from_file():
         n = int(f.readline().strip())
     return (e, n)
 
-# --- Page Routes ---
 @app.route('/')
 def index():
     return render_template('index.html')
 
 @app.route('/receiver')
-def receiver_page():
+def receiver():
     return render_template('receiver.html')
 
 @app.route('/sender')
-def sender_page():
+def sender():
     return render_template('sender.html')
 
 @app.route('/attacker')
-def attacker_page():
+def attacker():
     return render_template('attacker.html')
 
-# --- API Routes ---
 @app.route('/start-receiver', methods=['POST'])
 def start_receiver():
-    global public_key, private_key, receiver_log
+    global public_key, private_key, receiver_logs
     public_key, private_key = generate_rsa_keypair()
     save_public_key_to_file(*public_key)
-    receiver_log = ["✅ Receiver started and ready to accept messages."]
-    return jsonify({
-        "message": "Receiver started.",
-        "public_key": public_key
-    })
-
-@app.route('/receiver-logs')
-def receiver_logs():
-    return jsonify({"logs": receiver_log})
+    receiver_logs.append("✅ Receiver started and keys generated.")
+    return jsonify({"message": "Receiver started."})
 
 @app.route('/send-message', methods=['POST'])
 def send_message():
-    global public_key, receiver_log
-    public_key = load_public_key_from_file()
+    global private_key
+    if not private_key:
+        return jsonify({"error": "Receiver not started."}), 400
+
     message = request.form['message']
-    ciphertext = encrypt_message(message.encode(), public_key)
-    decrypted = decrypt_message(ciphertext, private_key)
-    receiver_log.append(f"🔐 Received Ciphertext: {str(ciphertext)[:20]}...")
-    receiver_log.append(f"🔓 Decrypted Message: {decrypted.decode(errors='ignore')}")
-    return jsonify({"ciphertext": str(ciphertext)})
+    public_key = load_public_key_from_file()
+    cipher = encrypt_message(message.encode(), public_key)
+    plaintext = decrypt_message(cipher, private_key)
+
+    log_entry = f"📥 Received: {cipher} | 🔓 Decrypted: {plaintext.decode(errors='ignore')}"
+    receiver_logs.append(log_entry)
+    return jsonify({"ciphertext": str(cipher)})
+
+@app.route('/api/receiver/logs')
+def get_receiver_logs():
+    return jsonify({"logs": receiver_logs})
 
 @app.route('/run-attacker', methods=['POST'])
 def run_attacker():
@@ -78,18 +72,16 @@ def run_attacker():
     e, n = load_public_key_from_file()
     results = []
 
-    for i in range(20):
+    for _ in range(20):
         msg = random.randint(1, n - 1)
         msg_bytes = msg.to_bytes((msg.bit_length() + 7) // 8, 'big')
-        ciphertext = encrypt_message(msg_bytes, (e, n))
+        cipher = encrypt_message(msg_bytes, (e, n))
 
         start = time.perf_counter()
-        decrypt_message(ciphertext, (private_key[0], private_key[1]))
+        decrypt_message(cipher, private_key)
         end = time.perf_counter()
-
         results.append({
-            "id": i + 1,
-            "ciphertext": str(ciphertext)[:12] + "...",
+            "ciphertext": str(cipher)[:10] + "...",
             "time": round(end - start, 6)
         })
 
@@ -100,6 +92,5 @@ def run_attacker():
 def analyze():
     return jsonify({"data": timing_log})
 
-# --- Run App ---
 if __name__ == '__main__':
     app.run(debug=True)

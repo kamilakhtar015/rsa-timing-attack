@@ -1,15 +1,9 @@
 body {
     font-family: sans-serif;
-    margin: 40px;
-    background: #f8f9fa;
+    padding: 20px;
   }
-  
-  h1, h2 {
-    color: #333;
-  }
-  
-  button {
-    padding: 10px 20px;
-    margin: 10px 0;
+  nav a {
+    margin: 10px;
+    text-decoration: none;
   }
   
