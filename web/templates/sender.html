@@ -1,27 +1,38 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Sender</title>
+  <title>Sender</title>
+  <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <h2>📨 Sender</h2>
-    <form method="POST" action="/send-message" id="sendForm">
-        <input type="text" name="message" placeholder="Enter Message" required>
-        <button type="submit">Send</button>
-    </form>
-    <p id="sendResult"></p>
+  <h2>✉️ Sender</h2>
 
-    <script>
-    document.getElementById("sendForm").onsubmit = async function(e) {
-        e.preventDefault();
-        const form = new FormData(e.target);
-        const res = await fetch('/send-message', {
-            method: 'POST',
-            body: form
-        });
-        const data = await res.json();
-        document.getElementById("sendResult").textContent = `Ciphertext: ${data.ciphertext}`;
-    };
-    </script>
+  <form onsubmit="sendMessage(); return false;">
+    <input type="text" id="msg" placeholder="Enter message" required />
+    <button type="submit">Send Message</button>
+  </form>
+
+  <div id="result" style="margin-top: 20px;"></div>
+
+  <script>
+    function sendMessage() {
+      const msg = document.getElementById("msg").value;
+      fetch('/send-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'message=' + encodeURIComponent(msg)
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("result").innerHTML = `
+          <strong>📨 Ciphertext:</strong><br><code>${data.ciphertext}</code>
+        `;
+      })
+      .catch(err => {
+        document.getElementById("result").innerHTML = `<span style="color:red;">Error sending message.</span>`;
+        console.error(err);
+      });
+    }
+  </script>
 </body>
 </html>

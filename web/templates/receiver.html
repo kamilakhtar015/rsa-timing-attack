@@ -1,22 +1,30 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Receiver</title>
+  <title>Receiver</title>
+  <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <h2>🧭 Receiver - Key Generation</h2>
-    <form method="POST" action="/start-receiver" id="receiverForm">
-        <button type="submit">Start Receiver (Generate Keys)</button>
-    </form>
-    <p id="receiverStatus"></p>
+  <h2>🟢 Receiver</h2>
+  <button onclick="startReceiver()">Start Receiver</button>
+  <div id="logs"></div>
 
-    <script>
-    document.getElementById("receiverForm").onsubmit = async function(e) {
-        e.preventDefault();
-        const res = await fetch('/start-receiver', { method: 'POST' });
-        const data = await res.json();
-        document.getElementById("receiverStatus").textContent = `✅ Receiver started. Public Key: ${data.public_key}`;
-    };
-    </script>
+  <script>
+    function startReceiver() {
+      fetch('/start-receiver', { method: 'POST' })
+        .then(res => res.json())
+        .then(data => alert(data.message));
+    }
+
+    // This will continuously fetch logs from the receiver
+    setInterval(() => {
+      fetch('/receiver-logs')
+        .then(res => res.json())
+        .then(data => {
+          const logs = data.logs.map(m => `<li>${m}</li>`).join("");
+          document.getElementById("logs").innerHTML = `<ul>${logs}</ul>`;
+        });
+    }, 2000);
+  </script>
 </body>
 </html>

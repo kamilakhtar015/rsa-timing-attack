@@ -1,46 +1,85 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Attacker</title>
+  <title>Attacker</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <h2>🕵️ Attacker - Timing Attack</h2>
-    <form method="POST" action="/run-attacker" id="attackForm">
-        <button type="submit">Run Timing Attack</button>
-    </form>
+  <h2>🧠 Attacker</h2>
 
-    <div id="attackResults"></div>
+  <button onclick="runAttack()">Run Timing Attack</button>
+  <p id="status" style="margin-top: 10px;"></p>
 
-    <form method="POST" action="/analyze" id="analyzeForm">
-        <button type="submit">Analyze Timings</button>
-    </form>
+  <canvas id="timingChart" width="800" height="400" style="margin-top: 20px;"></canvas>
 
-    <div id="analysis"></div>
+  <script>
+    let chart;
 
-    <script>
-    document.getElementById("attackForm").onsubmit = async function(e) {
-        e.preventDefault();
-        const res = await fetch('/run-attacker', { method: 'POST' });
-        const data = await res.json();
-        let html = "<h3>🔍 Results:</h3><ul>";
-        data.results.forEach(r => {
-            html += `<li>${r.ciphertext} - ${r.time}s</li>`;
+    function runAttack() {
+      document.getElementById("status").innerText = "Running attack...";
+
+      fetch('/run-attacker', { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+          const results = data.results;
+          const times = results.map(r => (r.time * 1000).toFixed(3)); // ms
+          const labels = results.map((r, i) => `#${i + 1}`);
+
+          if (chart) chart.destroy();
+          chart = new Chart(document.getElementById("timingChart"), {
+            type: 'line',
+            data: {
+              labels: labels,
+              datasets: [{
+                label: 'Decryption Time (ms)',
+                data: times,
+                borderColor: 'blue',
+                backgroundColor: 'lightblue',
+                borderWidth: 2,
+                fill: false,
+                tension: 0.2
+              }]
+            },
+            options: {
+              responsive: true,
+              plugins: {
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      const idx = context.dataIndex;
+                      const time = results[idx].time;
+                      const ct = results[idx].ciphertext;
+                      return [`Time: ${(time * 1000).toFixed(3)} ms`, `Cipher: ${ct}`];
+                    }
+                  }
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  title: {
+                    display: true,
+                    text: 'Time (ms)'
+                  }
+                },
+                x: {
+                  title: {
+                    display: true,
+                    text: 'Test Number'
+                  }
+                }
+              }
+            }
+          });
+
+          document.getElementById("status").innerText = "Attack complete. Chart updated.";
+        })
+        .catch(err => {
+          console.error(err);
+          document.getElementById("status").innerText = "❌ Error running attack.";
         });
-        html += "</ul>";
-        document.getElementById("attackResults").innerHTML = html;
-    };
-
-    document.getElementById("analyzeForm").onsubmit = async function(e) {
-        e.preventDefault();
-        const res = await fetch('/analyze', { method: 'POST' });
-        const data = await res.json();
-        let html = "<h3>📊 Timing Analysis:</h3><ul>";
-        data.data.forEach((r, i) => {
-            html += `<li>#${i+1} - ${r.time}s</li>`;
-        });
-        html += "</ul>";
-        document.getElementById("analysis").innerHTML = html;
-    };
-    </script>
+    }
+  </script>
 </body>
 </html>
