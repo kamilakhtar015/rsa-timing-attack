@@ -6,11 +6,13 @@
 </head>
 <body>
   <h2>✉️ Sender</h2>
+
   <form onsubmit="sendMessage(); return false;">
     <input type="text" id="msg" placeholder="Enter message" required />
     <button type="submit">Send Message</button>
   </form>
-  <div id="result"></div>
+
+  <div id="result" style="margin-top: 20px;"></div>
 
   <script>
     function sendMessage() {
@@ -22,7 +24,13 @@
       })
       .then(res => res.json())
       .then(data => {
-        document.getElementById("result").innerHTML = `<strong>Encrypted:</strong><br>${data.ciphertext}`;
+        document.getElementById("result").innerHTML = `
+          <strong>📨 Ciphertext:</strong><br><code>${data.ciphertext}</code>
+        `;
+      })
+      .catch(err => {
+        document.getElementById("result").innerHTML = `<span style="color:red;">Error sending message.</span>`;
+        console.error(err);
       });
     }
   </script>
