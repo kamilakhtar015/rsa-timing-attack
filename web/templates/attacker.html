@@ -7,8 +7,8 @@
 </head>
 <body>
   <h2>🧠 Attacker</h2>
-  <button onclick="runAttack()">Run Attack</button>
-  <canvas id="chart" width="800" height="400"></canvas>
+  <button onclick="runAttack()">Run Timing Attack</button>
+  <canvas id="timingChart" width="800" height="400"></canvas>
 
   <script>
     let chart;
@@ -17,24 +17,53 @@
       fetch('/run-attacker', { method: 'POST' })
         .then(res => res.json())
         .then(data => {
-          const times = data.results.map(d => d.time);
           const labels = data.results.map((_, i) => `#${i + 1}`);
+          const times = data.results.map(r => r.time);
+          const flags = data.results.map(r => r.is_slow ? 1 : 0);
+
+          const normalPoints = {
+            label: 'Decryption Time (normal)',
+            data: times.map((t, i) => flags[i] === 0 ? t : null),
+            borderColor: 'blue',
+            backgroundColor: 'blue',
+            showLine: true,
+            pointStyle: 'circle',
+            pointRadius: 5
+          };
+
+          const slowPoints = {
+            label: 'Suspected Bit = 1 (Slow)',
+            data: times.map((t, i) => flags[i] === 1 ? t : null),
+            borderColor: 'red',
+            backgroundColor: 'red',
+            showLine: false,
+            pointStyle: 'triangle',
+            pointRadius: 6
+          };
 
           if (chart) chart.destroy();
-          chart = new Chart(document.getElementById("chart"), {
+          chart = new Chart(document.getElementById("timingChart"), {
             type: 'line',
             data: {
-              labels,
-              datasets: [{
-                label: 'Decryption Time (s)',
-                data: times,
-                borderColor: 'blue',
-                borderWidth: 2
-              }]
+              labels: labels,
+              datasets: [normalPoints, slowPoints]
             },
             options: {
+              responsive: true,
+              plugins: {
+                title: {
+                  display: true,
+                  text: 'Timing Attack Analysis with Bit Leakage Inference'
+                }
+              },
               scales: {
-                y: { beginAtZero: true }
+                y: {
+                  beginAtZero: true,
+                  title: {
+                    display: true,
+                    text: 'Decryption Time (s)'
+                  }
+                }
               }
             }
           });

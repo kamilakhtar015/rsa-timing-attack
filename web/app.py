@@ -104,7 +104,7 @@ def run_attacker():
     e, n = load_public_key_from_file()
     results = []
 
-    for _ in range(10):
+    for _ in range(20):
         msg = random.randint(1, n - 1)
         msg_bytes = msg.to_bytes((msg.bit_length() + 7) // 8, 'big')
         cipher = encrypt_message(msg_bytes, (e, n))
@@ -112,10 +112,19 @@ def run_attacker():
         start = time.perf_counter()
         decrypt_message(cipher, (private_key[0], private_key[1]))
         end = time.perf_counter()
+
+        delta = round(end - start, 6)
         results.append({
             "ciphertext": str(cipher)[:12] + "...",
-            "time": round(end - start, 6)
+            "time": delta
         })
+
+    # Analyze timings to infer 'slow' responses
+    times = [r['time'] for r in results]
+    threshold = sum(times) / len(times) + (sum((t - sum(times)/len(times))**2 for t in times) / len(times))**0.5
+
+    for r in results:
+        r['is_slow'] = r['time'] > threshold
 
     timing_log = results
     return jsonify({"results": results})
