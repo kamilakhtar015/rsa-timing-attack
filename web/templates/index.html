@@ -1,15 +1,46 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>RSA Timing Attack UI</title>
+  <title>RSA Timing Attack Simulation</title>
   <link rel="stylesheet" href="/static/style.css">
+  <style>
+    .diagram-container {
+      margin: 40px auto;
+      text-align: center;
+    }
+    .diagram-box {
+      display: inline-block;
+      padding: 15px 25px;
+      margin: 10px;
+      border: 2px solid #333;
+      border-radius: 8px;
+      font-weight: bold;
+      background-color: #f0f0f0;
+    }
+    .arrow {
+      font-size: 24px;
+      vertical-align: middle;
+      margin: 0 20px;
+    }
+  </style>
 </head>
 <body>
-  <h1>RSA Timing Attack</h1>
-  <nav>
-    <a href="/receiver">Receiver</a> |
-    <a href="/sender">Sender</a> |
-    <a href="/attacker">Attacker</a>
-  </nav>
+  <h1>🔐 RSA Timing Attack UI</h1>
+  <p>Select a component to simulate:</p>
+
+  <ul>
+    <li><a href="/receiver">🟢 Receiver</a></li>
+    <li><a href="/sender">✉️ Sender</a></li>
+    <li><a href="/attacker">🧠 Attacker</a></li>
+  </ul>
+
+  <div class="diagram-container">
+    <div class="diagram-box">✉️ Sender</div>
+    <span class="arrow">➡️</span>
+    <div class="diagram-box">🟢 Receiver</div>
+    <span class="arrow">⬅️</span>
+    <div class="diagram-box">🧠 Attacker</div>
+    <p><em>Sender encrypts & sends message → Receiver decrypts & replies → Attacker observes time to infer private key bits</em></p>
+  </div>
 </body>
 </html>
