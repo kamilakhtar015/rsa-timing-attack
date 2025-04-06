@@ -116,7 +116,8 @@ def run_attacker():
         delta = round(end - start, 6)
         results.append({
             "ciphertext": str(cipher)[:12] + "...",
-            "time": delta
+            "time": round(end - start, 6),
+            "bit_guess": None
         })
 
     # Analyze timings to infer 'slow' responses
@@ -128,6 +129,28 @@ def run_attacker():
 
     timing_log = results
     return jsonify({"results": results})
+
+@app.route('/api/attacker/bit-recovery', methods=['GET'])
+def bit_recovery():
+    global timing_log
+    if not timing_log:
+        return jsonify({"error": "No timing data available."}), 400
+
+    # Compute average
+    avg_time = sum(d['time'] for d in timing_log) / len(timing_log)
+    threshold = avg_time * 1.10  # 10% above average
+
+    recovered_bits = []
+    for entry in timing_log:
+        bit = 1 if entry['time'] > threshold else 0
+        entry['bit_guess'] = bit
+        recovered_bits.append(bit)
+
+    return jsonify({
+        "guessed_bits": recovered_bits,
+        "threshold": round(threshold, 6),
+        "data": timing_log
+    })
 
 @app.route('/analyze', methods=['POST'])
 def analyze():

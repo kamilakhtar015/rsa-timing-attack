@@ -1,14 +1,62 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Attacker</title>
+  <title>Attacker - Timing Side Channel</title>
   <link rel="stylesheet" href="/static/style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    h2, h3 {
+      color: #333;
+    }
+    #timingChart {
+      margin-top: 20px;
+    }
+    #bit-table td {
+      padding: 6px 10px;
+      font-weight: bold;
+      text-align: center;
+    }
+    .legend-box {
+      display: flex;
+      align-items: center;
+      margin-top: 10px;
+    }
+    .legend-color {
+      width: 20px;
+      height: 20px;
+      margin-right: 8px;
+    }
+    .red { background-color: red; }
+    .blue { background-color: blue; }
+  </style>
 </head>
 <body>
-  <h2>🧠 Attacker</h2>
-  <button onclick="runAttack()">Run Timing Attack</button>
-  <canvas id="timingChart" width="800" height="400"></canvas>
+  <h2>🧠 Attacker - Timing Side Channel Simulation</h2>
+
+  <p>
+    This page simulates a timing side-channel attack on RSA. The attacker sends crafted ciphertexts to the receiver and measures the time taken to decrypt each message.
+    Based on the decryption delay, the attacker guesses whether the corresponding bit in the private key was <strong>1</strong> (longer time) or <strong>0</strong> (shorter time).
+  </p>
+
+  <button onclick="runAttack()">🔁 Run Timing Attack</button>
+
+  <div class="legend-box">
+    <div class="legend-color red"></div> = Bit guessed as <strong>1</strong> (higher time)
+    <div style="width: 20px;"></div>
+    <div class="legend-color blue"></div> = Bit guessed as <strong>0</strong> (lower time)
+  </div>
+
+  <canvas id="timingChart" width="900" height="400"></canvas>
+
+  <div style="margin-top: 40px;">
+    <h3>🧩 Recovered Bits from Timing Analysis</h3>
+    <p>The table below shows the guessed bits corresponding to each ciphertext based on timing delay:</p>
+    <table border="1" id="bit-table" style="border-collapse: collapse; margin-top: 10px;"></table>
+  </div>
 
   <script>
     let chart;
@@ -16,57 +64,48 @@
     function runAttack() {
       fetch('/run-attacker', { method: 'POST' })
         .then(res => res.json())
-        .then(data => {
-          const labels = data.results.map((_, i) => `#${i + 1}`);
-          const times = data.results.map(r => r.time);
-          const flags = data.results.map(r => r.is_slow ? 1 : 0);
+        .then(() => {
+          fetch('/api/attacker/bit-recovery')
+            .then(res => res.json())
+            .then(data => {
+              const times = data.data.map(r => r.time);
+              const labels = data.data.map((_, i) => `#${i + 1}`);
+              const colors = data.data.map(r => r.bit_guess === 1 ? 'red' : 'blue');
 
-          const normalPoints = {
-            label: 'Decryption Time (normal)',
-            data: times.map((t, i) => flags[i] === 0 ? t : null),
-            borderColor: 'blue',
-            backgroundColor: 'blue',
-            showLine: true,
-            pointStyle: 'circle',
-            pointRadius: 5
-          };
-
-          const slowPoints = {
-            label: 'Suspected Bit = 1 (Slow)',
-            data: times.map((t, i) => flags[i] === 1 ? t : null),
-            borderColor: 'red',
-            backgroundColor: 'red',
-            showLine: false,
-            pointStyle: 'triangle',
-            pointRadius: 6
-          };
-
-          if (chart) chart.destroy();
-          chart = new Chart(document.getElementById("timingChart"), {
-            type: 'line',
-            data: {
-              labels: labels,
-              datasets: [normalPoints, slowPoints]
-            },
-            options: {
-              responsive: true,
-              plugins: {
-                title: {
-                  display: true,
-                  text: 'Timing Attack Analysis with Bit Leakage Inference'
-                }
-              },
-              scales: {
-                y: {
-                  beginAtZero: true,
-                  title: {
-                    display: true,
-                    text: 'Decryption Time (s)'
+              if (chart) chart.destroy();
+              chart = new Chart(document.getElementById("timingChart"), {
+                type: 'bar',
+                data: {
+                  labels: labels,
+                  datasets: [{
+                    label: 'Decryption Time (seconds)',
+                    data: times,
+                    backgroundColor: colors
+                  }]
+                },
+                options: {
+                  responsive: true,
+                  plugins: {
+                    title: {
+                      display: true,
+                      text: '⏱️ Timing vs Ciphertext (Color = Guessed Bit)'
+                    }
+                  },
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      title: {
+                        display: true,
+                        text: 'Decryption Time (seconds)'
+                      }
+                    }
                   }
                 }
-              }
-            }
-          });
+              });
+
+              const bitRow = data.guessed_bits.map(bit => `<td>${bit}</td>`).join('');
+              document.getElementById("bit-table").innerHTML = `<tr>${bitRow}</tr>`;
+            });
         });
     }
   </script>
