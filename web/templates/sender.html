@@ -12,6 +12,8 @@
     <button type="submit">Send Message</button>
   </form>
 
+  <button onclick="replayLastMessage()" style="margin-top: 10px;">🔁 Replay Last Message</button>
+
   <div id="result" style="margin-top: 20px;"></div>
 
   <script>
@@ -32,6 +34,24 @@
         document.getElementById("result").innerHTML = `<span style="color:red;">Error sending message.</span>`;
         console.error(err);
       });
+    }
+
+    function replayLastMessage() {
+      fetch('/replay-message', { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+          if (data.ciphertext) {
+            document.getElementById("result").innerHTML = `
+              <strong>🔁 Replayed Ciphertext:</strong><br><code>${data.ciphertext}</code>
+            `;
+          } else {
+            document.getElementById("result").innerHTML = `<span style="color:red;">No message to replay.</span>`;
+          }
+        })
+        .catch(err => {
+          document.getElementById("result").innerHTML = `<span style="color:red;">Error replaying message.</span>`;
+          console.error(err);
+        });
     }
   </script>
 </body>

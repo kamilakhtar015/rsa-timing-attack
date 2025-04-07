@@ -1,3 +1,4 @@
+# app.py
 import os
 import sys
 import time
@@ -5,9 +6,7 @@ import random
 import json
 from flask import Flask, render_template, request, jsonify
 
-# Fix path to access core/
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 from core.rsa_core import generate_rsa_keypair, encrypt_message, decrypt_message
 
 app = Flask(__name__)
@@ -19,8 +18,8 @@ private_key = None
 timing_log = []
 sender_logs = []
 receiver_logs = []
+last_ciphertext = None
 
-# Utils
 def save_public_key_to_file(e, n):
     with open('../network/public_key.txt', 'w') as f:
         f.write(f"{e}\n{n}")
@@ -31,7 +30,6 @@ def load_public_key_from_file():
         n = int(f.readline().strip())
     return (e, n)
 
-# Routes
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -48,9 +46,6 @@ def receiver_page():
 def attacker_page():
     return render_template('attacker.html')
 
-# APIs
-
-# ---- Receiver ----
 @app.route('/start-receiver', methods=['POST'])
 def start_receiver():
     global public_key, private_key
@@ -70,22 +65,19 @@ def get_receiver_logs():
         logs = []
     return jsonify({"logs": logs})
 
-# ---- Sender ----
 @app.route('/send-message', methods=['POST'])
 def send_message():
-    global sender_logs
+    global sender_logs, receiver_logs, last_ciphertext
     public_key = load_public_key_from_file()
     message = request.form['message']
     ciphertext = encrypt_message(message.encode(), public_key)
+    last_ciphertext = ciphertext
 
-    # Store to logs
     entry = {"message": message, "ciphertext": str(ciphertext)}
     sender_logs.append(entry)
     with open('sender_logs.json', 'w') as f:
         json.dump(sender_logs, f)
 
-    # Simulate sending to receiver and decrypting
-    global private_key, receiver_logs
     if private_key:
         plaintext = decrypt_message(ciphertext, private_key).decode(errors='ignore')
         receiver_logs.append({
@@ -97,7 +89,6 @@ def send_message():
 
     return jsonify({"ciphertext": str(ciphertext)})
 
-# ---- Attacker ----
 @app.route('/run-attacker', methods=['POST'])
 def run_attacker():
     global public_key, private_key, timing_log
@@ -110,25 +101,87 @@ def run_attacker():
         cipher = encrypt_message(msg_bytes, (e, n))
 
         start = time.perf_counter()
-        decrypt_message(cipher, (private_key[0], private_key[1]))
+        decrypt_message(cipher, private_key)
         end = time.perf_counter()
 
         delta = round(end - start, 6)
         results.append({
             "ciphertext": str(cipher)[:12] + "...",
-            "time": round(end - start, 6),
-            "bit_guess": None
+            "time": delta
         })
 
-    # Analyze timings to infer 'slow' responses
     times = [r['time'] for r in results]
-    threshold = sum(times) / len(times) + (sum((t - sum(times)/len(times))**2 for t in times) / len(times))**0.5
+    avg = sum(times) / len(times)
+    stddev = (sum((t - avg)**2 for t in times) / len(times))**0.5
+    threshold = avg + stddev
 
     for r in results:
+        r['bit_guess'] = 1 if r['time'] > threshold else 0
         r['is_slow'] = r['time'] > threshold
+        r['replay'] = False
 
-    timing_log = results
+    timing_log.extend(results)
     return jsonify({"results": results})
+
+@app.route('/replay-last', methods=['POST'])
+def replay_last():
+    global last_ciphertext, timing_log
+    if not last_ciphertext:
+        return jsonify({"error": "No message to replay."}), 400
+
+    start = time.perf_counter()
+    decrypt_message(last_ciphertext, private_key)
+    end = time.perf_counter()
+    delta = round(end - start, 6)
+
+    times = [r['time'] for r in timing_log]
+    if not times:
+        threshold = delta
+    else:
+        avg = sum(times) / len(times)
+        threshold = avg * 1.10
+
+    entry = {
+        "ciphertext": str(last_ciphertext)[:12] + "...",
+        "time": delta,
+        "bit_guess": 1 if delta > threshold else 0,
+        "replay": True
+    }
+    timing_log.append(entry)
+    return jsonify({"replayed": entry})
+
+@app.route('/replay-message', methods=['POST'])
+def replay_last_message():
+    global sender_logs, private_key, receiver_logs
+
+    if not sender_logs:
+        return jsonify({"error": "No message to replay."}), 400
+
+    last_entry = sender_logs[-1]
+    message = last_entry["message"]
+    ciphertext = encrypt_message(message.encode(), load_public_key_from_file())
+
+    # Log it again
+    entry = {"message": message, "ciphertext": str(ciphertext)}
+    sender_logs.append(entry)
+    with open('sender_logs.json', 'w') as f:
+        json.dump(sender_logs, f)
+
+    # Simulate receiver decrypting it again
+    if private_key:
+        plaintext = decrypt_message(ciphertext, private_key).decode(errors='ignore')
+        receiver_logs.append({
+            "ciphertext": str(ciphertext),
+            "decrypted": plaintext
+        })
+        with open('receiver_logs.json', 'w') as f:
+            json.dump(receiver_logs, f)
+
+    # Save it for attacker to pick up
+    with open('last_replay.txt', 'w') as f:
+        f.write(str(ciphertext))
+
+    return jsonify({"ciphertext": str(ciphertext)})
 
 @app.route('/api/attacker/bit-recovery', methods=['GET'])
 def bit_recovery():
@@ -136,19 +189,8 @@ def bit_recovery():
     if not timing_log:
         return jsonify({"error": "No timing data available."}), 400
 
-    # Compute average
-    avg_time = sum(d['time'] for d in timing_log) / len(timing_log)
-    threshold = avg_time * 1.10  # 10% above average
-
-    recovered_bits = []
-    for entry in timing_log:
-        bit = 1 if entry['time'] > threshold else 0
-        entry['bit_guess'] = bit
-        recovered_bits.append(bit)
-
     return jsonify({
-        "guessed_bits": recovered_bits,
-        "threshold": round(threshold, 6),
+        "guessed_bits": [r['bit_guess'] for r in timing_log],
         "data": timing_log
     })
 
@@ -156,6 +198,5 @@ def bit_recovery():
 def analyze():
     return jsonify({"data": timing_log})
 
-# Run Server
 if __name__ == '__main__':
     app.run(debug=True)

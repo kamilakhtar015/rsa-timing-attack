@@ -4,110 +4,109 @@
   <title>Attacker - Timing Side Channel</title>
   <link rel="stylesheet" href="/static/style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-    }
-    h2, h3 {
-      color: #333;
-    }
-    #timingChart {
-      margin-top: 20px;
-    }
-    #bit-table td {
-      padding: 6px 10px;
-      font-weight: bold;
-      text-align: center;
-    }
-    .legend-box {
-      display: flex;
-      align-items: center;
-      margin-top: 10px;
-    }
-    .legend-color {
-      width: 20px;
-      height: 20px;
-      margin-right: 8px;
-    }
-    .red { background-color: red; }
-    .blue { background-color: blue; }
-  </style>
 </head>
 <body>
   <h2>🧠 Attacker - Timing Side Channel Simulation</h2>
 
   <p>
-    This page simulates a timing side-channel attack on RSA. The attacker sends crafted ciphertexts to the receiver and measures the time taken to decrypt each message.
-    Based on the decryption delay, the attacker guesses whether the corresponding bit in the private key was <strong>1</strong> (longer time) or <strong>0</strong> (shorter time).
+    This simulates a timing side-channel attack on RSA. Crafted ciphertexts are sent and the attacker guesses bits based on decryption delays.
   </p>
 
   <button onclick="runAttack()">🔁 Run Timing Attack</button>
-
-  <div class="legend-box">
-    <div class="legend-color red"></div> = Bit guessed as <strong>1</strong> (higher time)
-    <div style="width: 20px;"></div>
-    <div class="legend-color blue"></div> = Bit guessed as <strong>0</strong> (lower time)
-  </div>
+  <button onclick="replayLast()">🔁 Replay Last Message</button>
 
   <canvas id="timingChart" width="900" height="400"></canvas>
 
   <div style="margin-top: 40px;">
-    <h3>🧩 Recovered Bits from Timing Analysis</h3>
-    <p>The table below shows the guessed bits corresponding to each ciphertext based on timing delay:</p>
-    <table border="1" id="bit-table" style="border-collapse: collapse; margin-top: 10px;"></table>
+    <h3>🧩 Guessed Bits</h3>
+    <table border="1" id="bit-table" style="border-collapse: collapse;"></table>
   </div>
 
   <script>
     let chart;
-
+  
+    function renderChart(data) {
+      const labels = data.map((r, i) => r.replay ? `Replay ${i + 1}` : `#${i + 1}`);
+      const times = data.map(r => r.time);
+  
+      // Define the colors for each bit guess and replay
+      const colors = data.map(r => {
+        if (r.replay) return 'rgba(0, 255, 0, 0.7)';  // Green for replay (with transparency)
+        return r.bit_guess === 1 ? 'rgba(255, 0, 0, 0.7)' : 'rgba(0, 0, 255, 0.7)';  // Red for 1, Blue for 0 (with transparency)
+      });
+  
+      // Define the labels for the legend
+      const legendLabels = {
+        '1': ' = 1 (Red)',
+        '0': ' = 0 (Blue)',
+        'replay': ' = Replay (Green)'
+      };
+  
+      // Destroy any existing chart
+      if (chart) chart.destroy();
+      
+      // Create new chart with updated colors and custom legend
+      chart = new Chart(document.getElementById("timingChart"), {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Decryption Time (seconds)',
+            data: times,
+            backgroundColor: colors,  // Set background color for each bar
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            title: {
+              display: true,
+              text: '⏱️ Timing Analysis'
+            },
+            legend: {
+              labels: {
+                // Custom legend item text and color (manually set the colors for the legend items)
+                generateLabels: function(chart) {
+                  return [
+                    { text: legendLabels['1'], fillStyle: 'rgba(255, 0, 0, 0.7)' }, // Red for 1
+                    { text: legendLabels['0'], fillStyle: 'rgba(0, 0, 255, 0.7)' }, // Blue for 0
+                    { text: legendLabels['replay'], fillStyle: 'rgba(0, 255, 0, 0.7)' } // Green for Replay
+                  ];
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Decryption Time (s)'
+              }
+            }
+          }
+        }
+      });
+  
+      // Render guessed bits table
+      const bitRow = data.map(r => `<td>${r.bit_guess}</td>`).join('');
+      document.getElementById("bit-table").innerHTML = `<tr>${bitRow}</tr>`;
+    }
+  
     function runAttack() {
       fetch('/run-attacker', { method: 'POST' })
+        .then(() => fetch('/api/attacker/bit-recovery'))
         .then(res => res.json())
-        .then(() => {
-          fetch('/api/attacker/bit-recovery')
-            .then(res => res.json())
-            .then(data => {
-              const times = data.data.map(r => r.time);
-              const labels = data.data.map((_, i) => `#${i + 1}`);
-              const colors = data.data.map(r => r.bit_guess === 1 ? 'red' : 'blue');
-
-              if (chart) chart.destroy();
-              chart = new Chart(document.getElementById("timingChart"), {
-                type: 'bar',
-                data: {
-                  labels: labels,
-                  datasets: [{
-                    label: 'Decryption Time (seconds)',
-                    data: times,
-                    backgroundColor: colors
-                  }]
-                },
-                options: {
-                  responsive: true,
-                  plugins: {
-                    title: {
-                      display: true,
-                      text: '⏱️ Timing vs Ciphertext (Color = Guessed Bit)'
-                    }
-                  },
-                  scales: {
-                    y: {
-                      beginAtZero: true,
-                      title: {
-                        display: true,
-                        text: 'Decryption Time (seconds)'
-                      }
-                    }
-                  }
-                }
-              });
-
-              const bitRow = data.guessed_bits.map(bit => `<td>${bit}</td>`).join('');
-              document.getElementById("bit-table").innerHTML = `<tr>${bitRow}</tr>`;
-            });
-        });
+        .then(data => renderChart(data.data));
+    }
+  
+    function replayLast() {
+      fetch('/replay-last', { method: 'POST' })
+        .then(() => fetch('/api/attacker/bit-recovery'))
+        .then(res => res.json())
+        .then(data => renderChart(data.data));
     }
   </script>
+        
 </body>
 </html>
