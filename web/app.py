@@ -1,4 +1,3 @@
-# app.py
 import os
 import sys
 import time
@@ -19,6 +18,7 @@ timing_log = []
 sender_logs = []
 receiver_logs = []
 last_ciphertext = None
+constant_time_enabled = False
 
 def save_public_key_to_file(e, n):
     with open('../network/public_key.txt', 'w') as f:
@@ -56,15 +56,6 @@ def start_receiver():
         "public_key": public_key
     })
 
-@app.route('/api/receiver/logs', methods=['GET'])
-def get_receiver_logs():
-    if os.path.exists('receiver_logs.json'):
-        with open('receiver_logs.json', 'r') as f:
-            logs = json.load(f)
-    else:
-        logs = []
-    return jsonify({"logs": logs})
-
 @app.route('/send-message', methods=['POST'])
 def send_message():
     global sender_logs, receiver_logs, last_ciphertext
@@ -88,7 +79,10 @@ def send_message():
         json.dump(sender_logs, f)
 
     if private_key:
+        if constant_time_enabled:
+            time.sleep(0.01)  # Constant-time decryption simulation
         plaintext = decrypt_message(ciphertext, private_key).decode(errors='ignore')
+
         receiver_logs.append({
             "ciphertext": str(ciphertext),
             "decrypted": plaintext
@@ -97,6 +91,15 @@ def send_message():
             json.dump(receiver_logs, f)
 
     return jsonify({"ciphertext": str(ciphertext)})
+
+@app.route('/api/receiver/logs', methods=['GET'])
+def get_receiver_logs():
+    if os.path.exists('receiver_logs.json'):
+        with open('receiver_logs.json', 'r') as f:
+            logs = json.load(f)
+    else:
+        logs = []
+    return jsonify({"logs": logs})
 
 @app.route('/run-attacker', methods=['POST'])
 def run_attacker():
@@ -144,11 +147,7 @@ def replay_last():
     delta = round(end - start, 6)
 
     times = [r['time'] for r in timing_log]
-    if not times:
-        threshold = delta
-    else:
-        avg = sum(times) / len(times)
-        threshold = avg * 1.10
+    threshold = (sum(times) / len(times)) * 1.10 if times else delta
 
     entry = {
         "ciphertext": str(last_ciphertext)[:12] + "...",
@@ -184,16 +183,16 @@ def replay_last_message():
         json.dump(sender_logs, f)
 
     if private_key:
+        if constant_time_enabled:
+            time.sleep(0.01)
         plaintext = decrypt_message(ciphertext, private_key).decode(errors='ignore')
+
         receiver_logs.append({
             "ciphertext": str(ciphertext),
             "decrypted": plaintext
         })
         with open('receiver_logs.json', 'w') as f:
             json.dump(receiver_logs, f)
-
-    with open('last_replay.txt', 'w') as f:
-        f.write(str(ciphertext))
 
     return jsonify({"ciphertext": str(ciphertext)})
 
@@ -213,6 +212,23 @@ def encryption_times():
             for i, entry in enumerate(logs)
         ]
     })
+
+@app.route('/api/attacker/bit-recovery', methods=['GET'])
+def bit_recovery():
+    global timing_log
+    if not timing_log:
+        return jsonify({"data": []})
+    return jsonify({
+        "guessed_bits": [r['bit_guess'] for r in timing_log],
+        "data": timing_log
+    })
+
+@app.route('/toggle-constant-time', methods=['POST'])
+def toggle_constant_time():
+    global constant_time_enabled
+    enabled = request.args.get('enabled', 'false').lower() == 'true'
+    constant_time_enabled = enabled
+    return jsonify({"message": f"Constant-time decryption {'enabled' if enabled else 'disabled'}."})
 
 if __name__ == '__main__':
     app.run(debug=True)

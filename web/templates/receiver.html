@@ -3,29 +3,73 @@
 <head>
   <title>Receiver</title>
   <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-  <h2>🟢 Receiver</h2>
-  <button onclick="startReceiver()">Start Receiver</button>
-  <div id="logs"></div>
-
   <script>
+    let constantTime = false;
+
+    function toggleConstantTime() {
+      constantTime = !constantTime;
+      fetch(`/toggle-constant-time?enabled=${constantTime}`, { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById("toggleStatus").innerText = data.message;
+        })
+        .catch(err => console.error("Error toggling constant time:", err));
+    }
+
     function startReceiver() {
       fetch('/start-receiver', { method: 'POST' })
         .then(res => res.json())
-        .then(data => alert(data.message));
-    }
-
-    function fetchLogs() {
-      fetch('/api/receiver/logs')
-        .then(res => res.json())
         .then(data => {
-          const logs = data.logs.map(m => `<li>🧾 ${m.ciphertext} → ${m.decrypted}</li>`).join("");
-          document.getElementById("logs").innerHTML = `<ul>${logs}</ul>`;
+          document.getElementById("status").innerHTML = `
+            ✅ Receiver started.<br>
+            <strong>Public Key:</strong> (${data.public_key[0]}, ${data.public_key[1]})
+          `;
+          loadReceiverLogs();
+        })
+        .catch(err => {
+          document.getElementById("status").innerHTML = `<span style="color:red;">Error starting receiver.</span>`;
+          console.error(err);
         });
     }
 
-    setInterval(fetchLogs, 2000);
+    function loadReceiverLogs() {
+      fetch('/api/receiver/logs')
+        .then(res => res.json())
+        .then(data => {
+          const logsDiv = document.getElementById("logs");
+          if (!data.logs || data.logs.length === 0) {
+            logsDiv.innerHTML = "<em>No decrypted messages yet.</em>";
+            return;
+          }
+
+          const items = data.logs.map(entry => `
+            <div class="log-entry">
+              <strong>🔐 Ciphertext:</strong><br><code>${entry.ciphertext}</code><br>
+              <strong>🧾 Decrypted:</strong> ${entry.decrypted}
+            </div>
+            <hr>
+          `).join("");
+
+          logsDiv.innerHTML = items;
+        })
+        .catch(err => console.error("Failed to load receiver logs", err));
+    }
+
+    // Poll logs every 3 seconds
+    setInterval(loadReceiverLogs, 3000);
+    window.onload = loadReceiverLogs;
   </script>
+</head>
+<body>
+  <h2>🔓 Receiver</h2>
+
+  <button onclick="startReceiver()">Start Receiver & Generate Keys</button>
+  <div id="status" style="margin-top: 10px;"></div>
+
+  <button onclick="toggleConstantTime()" style="margin-top: 20px;">Toggle Constant Time Decryption</button>
+  <div id="toggleStatus" style="margin-top: 5px;"></div>
+
+  <h3 style="margin-top: 30px;">📬 Decrypted Messages</h3>
+  <div id="logs"></div>
 </body>
 </html>

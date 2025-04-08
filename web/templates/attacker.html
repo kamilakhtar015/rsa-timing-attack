@@ -24,28 +24,28 @@
 
   <script>
     let chart;
-  
+
     function renderChart(data) {
+      if (!Array.isArray(data) || data.length === 0) {
+        document.getElementById("bit-table").innerHTML = "<tr><td>No timing data available yet.</td></tr>";
+        if (chart) chart.destroy();
+        return;
+      }
+
       const labels = data.map((r, i) => r.replay ? `Replay ${i + 1}` : `#${i + 1}`);
       const times = data.map(r => r.time);
-  
-      // Define the colors for each bit guess and replay
       const colors = data.map(r => {
-        if (r.replay) return 'rgba(0, 255, 0, 0.7)';  // Green for replay (with transparency)
-        return r.bit_guess === 1 ? 'rgba(255, 0, 0, 0.7)' : 'rgba(0, 0, 255, 0.7)';  // Red for 1, Blue for 0 (with transparency)
+        if (r.replay) return 'rgba(0, 255, 0, 0.7)';
+        return r.bit_guess === 1 ? 'rgba(255, 0, 0, 0.7)' : 'rgba(0, 0, 255, 0.7)';
       });
-  
-      // Define the labels for the legend
+
       const legendLabels = {
         '1': ' = 1 (Red)',
         '0': ' = 0 (Blue)',
         'replay': ' = Replay (Green)'
       };
-  
-      // Destroy any existing chart
+
       if (chart) chart.destroy();
-      
-      // Create new chart with updated colors and custom legend
       chart = new Chart(document.getElementById("timingChart"), {
         type: 'bar',
         data: {
@@ -53,7 +53,7 @@
           datasets: [{
             label: 'Decryption Time (seconds)',
             data: times,
-            backgroundColor: colors,  // Set background color for each bar
+            backgroundColor: colors,
           }]
         },
         options: {
@@ -65,12 +65,11 @@
             },
             legend: {
               labels: {
-                // Custom legend item text and color (manually set the colors for the legend items)
-                generateLabels: function(chart) {
+                generateLabels: function () {
                   return [
-                    { text: legendLabels['1'], fillStyle: 'rgba(255, 0, 0, 0.7)' }, // Red for 1
-                    { text: legendLabels['0'], fillStyle: 'rgba(0, 0, 255, 0.7)' }, // Blue for 0
-                    { text: legendLabels['replay'], fillStyle: 'rgba(0, 255, 0, 0.7)' } // Green for Replay
+                    { text: legendLabels['1'], fillStyle: 'rgba(255, 0, 0, 0.7)' },
+                    { text: legendLabels['0'], fillStyle: 'rgba(0, 0, 255, 0.7)' },
+                    { text: legendLabels['replay'], fillStyle: 'rgba(0, 255, 0, 0.7)' }
                   ];
                 }
               }
@@ -87,26 +86,37 @@
           }
         }
       });
-  
-      // Render guessed bits table
+
       const bitRow = data.map(r => `<td>${r.bit_guess}</td>`).join('');
       document.getElementById("bit-table").innerHTML = `<tr>${bitRow}</tr>`;
     }
-  
+
+    function loadRecoveryData() {
+      fetch('/api/attacker/bit-recovery')
+        .then(res => {
+          if (!res.ok) throw new Error("Failed to fetch timing data.");
+          return res.json();
+        })
+        .then(data => renderChart(data.data))
+        .catch(err => {
+          console.error("Error loading timing data:", err);
+          document.getElementById("bit-table").innerHTML = `<tr><td>Error loading data.</td></tr>`;
+        });
+    }
+
     function runAttack() {
       fetch('/run-attacker', { method: 'POST' })
-        .then(() => fetch('/api/attacker/bit-recovery'))
-        .then(res => res.json())
-        .then(data => renderChart(data.data));
+        .then(() => loadRecoveryData());
     }
-  
+
     function replayLast() {
       fetch('/replay-last', { method: 'POST' })
-        .then(() => fetch('/api/attacker/bit-recovery'))
-        .then(res => res.json())
-        .then(data => renderChart(data.data));
+        .then(() => loadRecoveryData());
     }
+
+    // Load existing data on page load
+    window.onload = loadRecoveryData;
   </script>
-        
+
 </body>
 </html>
