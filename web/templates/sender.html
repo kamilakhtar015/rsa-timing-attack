@@ -3,6 +3,7 @@
 <head>
   <title>Sender</title>
   <link rel="stylesheet" href="/static/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <h2>✉️ Sender</h2>
@@ -11,12 +12,77 @@
     <input type="text" id="msg" placeholder="Enter message" required />
     <button type="submit">Send Message</button>
   </form>
-
-  <button onclick="replayLastMessage()" style="margin-top: 10px;">🔁 Replay Last Message</button>
+  <button onclick="replayLastMessage()">Replay Last Message</button>
 
   <div id="result" style="margin-top: 20px;"></div>
 
+  <canvas id="encChart" width="800" height="300" style="margin-top: 40px;"></canvas>
+
   <script>
+    let chart;
+
+    function renderEncChart(data) {
+      const labels = data.map(d => d.label);
+      const times = data.map(d => d.time);
+
+      if (chart) chart.destroy();
+
+      chart = new Chart(document.getElementById('encChart'), {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Encryption Time (s)',
+            data: times,
+            backgroundColor: 'rgba(100, 200, 255, 0.7)'
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            title: {
+              display: true,
+              text: '🔒 Encryption Timing Analysis'
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Encryption Time (s)'
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function fetchEncryptionData() {
+      fetch('/api/encryption-times')
+        .then(res => res.json())
+        .then(data => renderEncChart(data.data));
+    }
+
+    function replayLastMessage() {
+      fetch('/replay-message', { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+          if (data.ciphertext) {
+            document.getElementById("result").innerHTML = `
+              <strong>🔁 Replayed Ciphertext:</strong><br><code>${data.ciphertext}</code>
+            `;
+            fetchEncryptionData();
+          } else {
+            document.getElementById("result").innerHTML = `<span style="color:red;">No message to replay.</span>`;
+          }
+        })
+        .catch(err => {
+          document.getElementById("result").innerHTML = `<span style="color:red;">Error replaying message.</span>`;
+          console.error(err);
+        });
+    }
+
     function sendMessage() {
       const msg = document.getElementById("msg").value;
       fetch('/send-message', {
@@ -29,6 +95,7 @@
         document.getElementById("result").innerHTML = `
           <strong>📨 Ciphertext:</strong><br><code>${data.ciphertext}</code>
         `;
+        fetchEncryptionData();
       })
       .catch(err => {
         document.getElementById("result").innerHTML = `<span style="color:red;">Error sending message.</span>`;
@@ -36,23 +103,7 @@
       });
     }
 
-    function replayLastMessage() {
-      fetch('/replay-message', { method: 'POST' })
-        .then(res => res.json())
-        .then(data => {
-          if (data.ciphertext) {
-            document.getElementById("result").innerHTML = `
-              <strong>🔁 Replayed Ciphertext:</strong><br><code>${data.ciphertext}</code>
-            `;
-          } else {
-            document.getElementById("result").innerHTML = `<span style="color:red;">No message to replay.</span>`;
-          }
-        })
-        .catch(err => {
-          document.getElementById("result").innerHTML = `<span style="color:red;">Error replaying message.</span>`;
-          console.error(err);
-        });
-    }
+    window.onload = fetchEncryptionData;
   </script>
 </body>
 </html>

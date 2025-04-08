@@ -70,10 +70,19 @@ def send_message():
     global sender_logs, receiver_logs, last_ciphertext
     public_key = load_public_key_from_file()
     message = request.form['message']
+
+    start = time.perf_counter()
     ciphertext = encrypt_message(message.encode(), public_key)
+    end = time.perf_counter()
+    encryption_time = round(end - start, 6)
+
     last_ciphertext = ciphertext
 
-    entry = {"message": message, "ciphertext": str(ciphertext)}
+    entry = {
+        "message": message,
+        "ciphertext": str(ciphertext),
+        "encryption_time": encryption_time
+    }
     sender_logs.append(entry)
     with open('sender_logs.json', 'w') as f:
         json.dump(sender_logs, f)
@@ -159,15 +168,21 @@ def replay_last_message():
 
     last_entry = sender_logs[-1]
     message = last_entry["message"]
-    ciphertext = encrypt_message(message.encode(), load_public_key_from_file())
 
-    # Log it again
-    entry = {"message": message, "ciphertext": str(ciphertext)}
+    start = time.perf_counter()
+    ciphertext = encrypt_message(message.encode(), load_public_key_from_file())
+    end = time.perf_counter()
+    encryption_time = round(end - start, 6)
+
+    entry = {
+        "message": message,
+        "ciphertext": str(ciphertext),
+        "encryption_time": encryption_time
+    }
     sender_logs.append(entry)
     with open('sender_logs.json', 'w') as f:
         json.dump(sender_logs, f)
 
-    # Simulate receiver decrypting it again
     if private_key:
         plaintext = decrypt_message(ciphertext, private_key).decode(errors='ignore')
         receiver_logs.append({
@@ -177,26 +192,27 @@ def replay_last_message():
         with open('receiver_logs.json', 'w') as f:
             json.dump(receiver_logs, f)
 
-    # Save it for attacker to pick up
     with open('last_replay.txt', 'w') as f:
         f.write(str(ciphertext))
 
     return jsonify({"ciphertext": str(ciphertext)})
 
-@app.route('/api/attacker/bit-recovery', methods=['GET'])
-def bit_recovery():
-    global timing_log
-    if not timing_log:
-        return jsonify({"error": "No timing data available."}), 400
-
-    return jsonify({
-        "guessed_bits": [r['bit_guess'] for r in timing_log],
-        "data": timing_log
-    })
-
 @app.route('/analyze', methods=['POST'])
 def analyze():
     return jsonify({"data": timing_log})
+
+@app.route('/api/encryption-times', methods=['GET'])
+def encryption_times():
+    if not os.path.exists('sender_logs.json'):
+        return jsonify({"data": []})
+    with open('sender_logs.json', 'r') as f:
+        logs = json.load(f)
+    return jsonify({
+        "data": [
+            {"label": f"#{i+1}", "time": entry.get("encryption_time", 0)}
+            for i, entry in enumerate(logs)
+        ]
+    })
 
 if __name__ == '__main__':
     app.run(debug=True)
