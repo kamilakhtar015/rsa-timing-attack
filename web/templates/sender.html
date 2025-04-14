@@ -11,8 +11,8 @@
   <form onsubmit="sendMessage(); return false;">
     <input type="text" id="msg" placeholder="Enter message" required />
     <button type="submit">Send Message</button>
+    <button onclick="replayLastMessage()">Replay Last Message</button>
   </form>
-  <button onclick="replayLastMessage()">Replay Last Message</button>
 
   <div id="result" style="margin-top: 20px;"></div>
 
