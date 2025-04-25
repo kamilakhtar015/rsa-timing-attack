@@ -138,7 +138,7 @@ pip install -r requirements.txt
 - Matplotlib
 - Numpy
 
-All dependencies can be installed via:
+All dependencies can be installed via:  
 
 ```bash
 pip install -r requirements.txt
