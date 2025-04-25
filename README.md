@@ -154,6 +154,6 @@ See the [LICENSE](LICENSE) file for more details.
 
 ---
 
-## 📬 Contact
+## Contact
 
 For questions, feedback, or contributions, please open an issue at [github.com/pallasite99/rsa-timing-attack/issues](https://github.com/pallasite99/rsa-timing-attack/issues).
