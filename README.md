@@ -23,13 +23,12 @@ rsa-timing-attack/
 │   ├── templates/         # HTML pages
 │   │   ├── index.html
 │   │   ├── sender.html
+|   |   |── attacker.html
 │   │   └── receiver.html
 │   └── static/            # CSS and JavaScript
 │       ├── style.css
-│       └── chart_logic.js
 ├── logs/                  # Timing attack logs
 │   └── timing_results.txt
-├── analyze_attack.py      # Analyze and plot timing results
 ├── requirements.txt       # Python dependencies
 └── README.md              # Project documentation (this file)
 ```
