@@ -8,7 +8,7 @@ This project demonstrates a **timing side-channel attack** on the RSA encryption
 
 <<<<<<< HEAD
 ## Project Structure -- 
-=======
+=======   
 ### 📁 Project Structure
 >>>>>>> my-local-changes
 
